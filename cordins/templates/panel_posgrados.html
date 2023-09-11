@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <!-- Agrega estilo tabla de datos Boostrap -->
+    <link rel="stylesheet" href="{% static 'Boostrap5/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'CSS_CORDINS/palen_posgrados.css' %}">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.jqueryui.min.css">
+    <title>ESTUDIANTES POR POSGRADO</title>
+
+</head>
+
+<header>
+    <!-- La imagen institucional -->
+    <div class="center-image">
+        <img src="{% static 'imagenes/SubDirImg.png' %}" alt="" width="700">
+    </div>
+    <br>
+    <div class="content">
+        <h2>{{ usuario.cve_posgrad }} - {{ usuario.nom_program }}</h2>
+        <h1>Autorización para preinscripciones: {{ periodo }} </h1>
+        <p></p>
+        <div>
+            {% if messages %}
+                {% for message in messages %}
+                    <div{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</header>
+
+<body>
+<main>
+    <div class="form-container">
+        <h1 style="text-align: center;">Selecciona una categoría</h1>
+        <label for="categoria"></label>
+        <select name="categoria" id="categoria" class="form-select">
+            <option value="" selected disabled>-- Selecciona una categoría --</option>
+            {% for clave, valor in categorias.items %}
+                <option value="{{ clave }}">{{ valor }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <table id="tabla_estudiantes" class="display" style="width:100%">
+        <thead>
+        <tr>
+            <th scope="col">ID</th>
+            <th scope="col">MATRICULA</th>
+            <th scope="col">NOMBRE(S)</th>
+            <th scope="col">CONSEJO PARTICULAR</th>
+            <th scope="col">AETA</th>
+            <!-- <th scope="col">ADJUNTAR</th> -->
+        </tr>
+        </thead>
+        <tbody>
+        <!-- La lista de estudiantes se cargará aquí dinámicamente -->
+        </tbody>
+    </table>
+
+    <!-- Los datos de la tabla se cargarán aquí -->
+    <div>
+        <button class="btn logout-button" type="submit" id="logout-button">Cerrar sesión</button>
+    </div>
+</main>
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.jqueryui.min.js"></script>
+
+
+<script>
+    document.getElementById("logout-button").addEventListener("click", function() {
+        window.location.href = "/cordins/logout/";
+    });
+</script>
+
+<script>
+    new DataTable('#tabla_estudiantes');
+</script>
+
+<script>
+    $(document).ready(function () {
+        $('#categoria').change(function() {
+            var selectedValue = $(this).val();
+
+            $.ajax({
+                url: "{% url 'cordins:estudiantes_por_categoria' %}",
+                type: 'GET',
+                data: {
+                    'categoria': selectedValue, // Envía el valor correcto de categoria
+                },
+                dataType: 'json',
+                success: function(data) {
+                    // Limpiar la tabla antes de agregar nuevos datos
+                    $('#tabla_estudiantes tbody').empty();
+                    if (data.length > 0) {
+                        // Iterar sobre el arreglo de estudiantes y agregar filas a la tabla
+                        for (var i = 0; i < data.length; i++) {
+                            var estudiante = data[i];
+
+                            var registroConsejop = estudiante.consejop ? 'REGISTRADO' : 'NO REGISTRADO';
+
+                            var fila = '<tr>' +
+                                '<th scope="row">' + (i + 1) + '</th>' +
+                                '<td>' + estudiante.cve_estud + '</td>' +
+                                '<td>' + estudiante.nombres + ' ' + estudiante.apellidos + '</td>' +
+                                '<td>' + registroConsejop + '</td>' +
+                                '<td>' +
+                                '<input type="checkbox" class="checkbox-campo" data-estudiante-cve_estud="' + estudiante.cve_estud + '"' + (estudiante.aeta ? ' checked' : '') + '>' +
+                                '</td>' +
+                                '</tr>';
+                            $('#tabla_estudiantes tbody').append(fila);
+                        }
+                    } else {
+                        // Si no hay estudiantes para la categoría seleccionada, mostrar mensaje o realizar alguna acción
+                        var mensaje = '<tr><td colspan="6">No se encontraron estudiantes para esta categoría.</td></tr>';
+                        $('#tabla_estudiantes tbody').append(mensaje);
+                    }
+                },
+                error: function() {
+                    alert('Hubo un error al buscar el curso seleccionado');
+                }
+            });
+        });
+
+        // Manejar el clic en el checkbox
+        $('#tabla_estudiantes').on('click', '.checkbox-campo', function () {
+            var checkbox = $(this);
+            var cve_estud = checkbox.data('estudiante-cve_estud'); // Obtener el valor de data-estudiante-cve_estud
+            var isChecked = checkbox.prop('checked');
+
+            $.ajax({
+                url: "{% url 'cordins:actualizar_checkbox' %}",
+                type: 'POST',
+                data: {
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                    'cve_estud': cve_estud, // Utilizar el nombre correcto del campo
+                },
+                dataType: 'json',
+                success: function (data) {
+                    if (data.status === 'success') {
+                        // El estado del checkbox en el servidor se ha actualizado correctamente,
+                        // por lo tanto, no es necesario hacer nada más aquí
+                    } else {
+                        alert('Error al actualizar el checkbox.');
+                    }
+                },
+                error: function () {
+                    alert('Error al conectar con el servidor.');
+                }
+            });
+        });
+
+    });
+</script>
+
+
+
+
+</body>
+</html>

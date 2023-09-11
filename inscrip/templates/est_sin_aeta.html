@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADVERTENCIA</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #333;
+            background-color: #f7f7f7;
+            display: flex; /* Usamos flexbox para centrar el contenido */
+            justify-content: center; /* Centramos horizontalmente */
+            /* align-items: center;  Centramos verticalmente */
+            align-items: flex-start; /* Centramos verticalmente hacia arriba */
+            min-height: 100vh; /* Asegura que el contenido ocupe al menos la altura de la ventana */
+        }
+
+        /* Contenedor principal */
+        main {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 80%;
+            margin: 0 auto;
+            background-color: #f5f5f5;
+            border: 2px solid #dddddd; /* Establecemos el color del borde directamente */
+        }
+        h1, h2 {
+            color: #333;
+            font-weight: bold;
+            font-size: 40px;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        h2 {
+            font-size: 20px;
+            font-weight: normal;
+        }
+        /* Estilo base para el mensaje de advertencia */
+        .warning-message {
+          font-size: 24px;
+          color: red; /* Color de texto rojo */
+          text-align: center;
+          animation: blink 1s infinite; /* Aplicar animación "blink" infinita */
+        }
+
+        /* Definición de la animación "blink" */
+        @keyframes blink {
+          0%, 50%, 100% {
+            opacity: 1; /* El mensaje será visible en los momentos 0%, 50% y 100% de la animación */
+          }
+          25%, 75% {
+            opacity: 0; /* El mensaje estará invisible en los momentos 25% y 75% de la animación */
+          }
+        }
+
+        /* Estilo base para el botón */
+        .btn {
+            padding: 10px 20px; /* Espaciado interno (vertical y horizontal) */
+            font-size: 16px; /* Tamaño de fuente */
+            border: none; /* Eliminar borde */
+            border-radius: 5px; /* Bordes redondeados */
+            cursor: pointer; /* Cambiar el cursor al pasar el ratón sobre el botón */
+            transition: background-color 0.3s ease; /* Transición suave para el cambio de color de fondo */
+        }
+
+        /* Estilo específico para el botón de cerrar sesión */
+        .logout-button {
+            background-color: #f44336; /* Color de fondo */
+            color: white; /* Color del texto */
+        }
+
+        /* Estilo al pasar el ratón sobre el botón */
+        .logout-button:hover {
+            background-color: #d32f2f; /* Cambia el color de fondo al pasar el ratón sobre el botón */
+        }
+
+    </style>
+</head>
+<body>
+<main>
+     <!-- La imagen institucional -->
+    <div class="center-image">
+        <img src="{% static 'imagenes/SubDirImg.png' %}" alt="" width="600">
+    </div>
+    <h3 class="warning-message">¡ADVERTENCIA!</h3>
+    <h1>Estimad@: {{ estudiante.nombres }} {{ estudiante.apellidos }}</h1>
+    <h2>Falta entregar Acta de evaluación de trabajo académico.</h2>
+    <h2>Por favor, acuda a la Coordinación de: {{ programa.nom_program }} para mas información.</h2>
+
+    <div>
+        <button class="btn logout-button" type="submit" id="logout-button">Cerrar sesión</button>
+    </div>
+
+</main>
+
+
+<script>
+    document.getElementById("logout-button").addEventListener("click", function() {
+        window.location.href = "/inscrip/logout/";
+    });
+</script>
+</body>
+</html>
