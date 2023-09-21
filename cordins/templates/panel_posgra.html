@@ -39,7 +39,7 @@
 
 <main>
 
-<div id="respuesta-servidor"></div>
+    <div id="respuesta-servidor"></div>
 
     <table id="tabla_estudiantes" class="display" style="width:100%">
         <thead>
@@ -98,112 +98,68 @@
     new DataTable('#tabla_estudiantes');
 
     // Obtener todos los botones "Adjuntar" por su clase
-const botonesAdjuntar = document.querySelectorAll(".btnAdjuntar");
+    const botonesAdjuntar = document.querySelectorAll(".btnAdjuntar");
 
-botonesAdjuntar.forEach(function(btnAdjuntar) {
-    btnAdjuntar.addEventListener("click", function() {
-        console.log('se esta ejecutando');
-        const fila = this.closest("tr");
-        const archivoInput = fila.querySelector(".archivo");
-        const archivoSeleccionado = archivoInput.files[0];
-        const cve_estud = this.dataset.estudiante; // Obtener el ID del estudiante desde el atributo "data-estudiante"
-        const cve_program = '{{ usuario.cve_program }}';
+    botonesAdjuntar.forEach(function(btnAdjuntar) {
+        btnAdjuntar.addEventListener("click", function() {
+            console.log('se esta ejecutando');
+            const fila = this.closest("tr");
+            const archivoInput = fila.querySelector(".archivo");
+            const archivoSeleccionado = archivoInput.files[0];
+            const cve_estud = this.dataset.estudiante; // Obtener el ID del estudiante desde el atributo "data-estudiante"
+            const cve_program = '{{ usuario.cve_program }}';
 
-       // const cve_estud = document.querySelector("input[name='cve_estud']").value;
-
-
-        if (archivoSeleccionado) {
-            console.log("archivoSeleccionado:", archivoSeleccionado);
-
-            // Crear un objeto FormData para enviar el archivo y el ID del estudiante al servidor
-            const formData = new FormData();
-            formData.append("pdf", archivoSeleccionado);
-            formData.append("cve_estud", cve_estud); // Usar el valor de data-estudiante
-            formData.append("cve_program", cve_program);
-
-            // Obtener el token CSRF desde las cookies
-            const csrftoken = getCookie("csrftoken");
-
-            // Agregar el token CSRF al encabezado de la solicitud
-            fetch(`/cordins/recibir_archivo/`, {
-                method: "POST",
-                body: formData,
-                headers: {
-                    "X-CSRFToken": csrftoken
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Mostrar la respuesta del servidor en el div de respuesta
-                const respuestaServidorDiv = document.getElementById("respuesta-servidor");
-                respuestaServidorDiv.textContent = data.message;
-            })
-            .catch(error => {
-                console.log("Error al enviar el archivo:", error);
-            });
-        } else {
-            console.log("Ningún archivo seleccionado.");
-        }
-    });
-
-    // Función para obtener el valor de una cookie específica
-    function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(";").shift();
-    }
-});
-
-</script>
-</body>
+            // const cve_estud = document.querySelector("input[name='cve_estud']").value;
 
 
-<script> /*
-    document.getElementById("btnAdjuntar").addEventListener("click", function() {
-        console.log('se esta ejecutando')
-        const archivoInput = document.getElementById("archivo");
-        const archivoSeleccionado = archivoInput.files[0];
-        const cve_estud = this.dataset.estudiante; // Obtener el ID del estudiante desde el atributo "data-estudiante"
-        console.log('se esta ejecutando')
+            if (archivoSeleccionado) {
+                console.log("archivoSeleccionado:", archivoSeleccionado);
 
-        if (archivoSeleccionado) {
-            // Crear un objeto FormData para enviar el archivo y el ID del estudiante al servidor
-            const formData = new FormData();
-            formData.append("pdf", archivoSeleccionado); // Cambiar "archivo" por "pdf" para que coincida con la vista
-            formData.append("estudiante", cve_estud);
+                // Crear un objeto FormData para enviar el archivo y el ID del estudiante al servidor
+                const formData = new FormData();
+                formData.append("pdf", archivoSeleccionado);
+                formData.append("cve_estud", cve_estud); // Usar el valor de data-estudiante
+                formData.append("cve_program", cve_program);
 
-            // Obtener el token CSRF desde las cookies
-            const csrftoken = getCookie("csrftoken");
+                // Obtener el token CSRF desde las cookies
+                const csrftoken = getCookie("csrftoken");
 
-            // Agregar el token CSRF al encabezado de la solicitud
-            fetch(`/inscrip/recibir_archivo/${cve_estud}/`, { // Agregar el ID del estudiante en la URL del endpoint
-                method: "POST",
-                body: formData,
-                headers: {
-                    "X-CSRFToken": csrftoken
-                }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    // Mostrar la respuesta del servidor en el div de respuesta
-                    const respuestaServidorDiv = document.getElementById("respuesta-servidor");
-                    respuestaServidorDiv.textContent = data.message;
+                // Agregar el token CSRF al encabezado de la solicitud
+                fetch(`/cordins/recibir_archivo/`, {
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        "X-CSRFToken": csrftoken
+                    }
                 })
-                .catch(error => {
-                    console.log("Error al enviar el archivo:", error);
-                });
-        } else {
-            console.log("Ningún archivo seleccionado.");
+                    .then(response => response.json())
+                    .then(data => {
+                        // Mostrar la respuesta del servidor en el div de respuesta
+                        const respuestaServidorDiv = document.getElementById("respuesta-servidor");
+                        respuestaServidorDiv.textContent = data.message;
+
+                        // Verificar si la respuesta fue exitosa
+                        if (data.success) {
+                            // Recargar la página si la respuesta es exitosa
+                            location.reload();
+                        }
+                    })
+                    .catch(error => {
+                        console.log("Error al enviar el archivo:", error);
+                    });
+            } else {
+                console.log("Ningún archivo seleccionado.");
+            }
+        });
+
+        // Función para obtener el valor de una cookie específica
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(";").shift();
         }
     });
 
-    // Función para obtener el valor de una cookie específica
-    function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(";").shift();
-    }
-*/
 </script>
 
 </body>

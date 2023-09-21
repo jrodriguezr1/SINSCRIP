@@ -4,8 +4,9 @@ import os
 from django.contrib.auth import logout, login
 from django.core.mail import EmailMultiAlternatives
 from django.utils.html import strip_tags
+
 from inscrip.models import Coordinaciones, estudiante_consejero, Capcurs, Catacurs, Becarios, Asistira, Catabeca, \
-    Imparegu, Estudian, Sinsevi
+    Imparegu, Estudian, Sinsevi, Estud_nacion, Catanaci
 from inscrip.models import Academic
 from inscrip.forms import AsistiraForm, SinseviForm
 from django.contrib import messages
@@ -57,8 +58,7 @@ def verificar_credencialEst(request):
 
 def mis_cursos(request):
     usuario_id = request.session.get('usuario_id')
-    periodo = settings.PERIODO
-    anio = settings.ANIO
+
     estudiante = get_object_or_404(Estudian, id=usuario_id)
     #valor de aeta
     if estudiante.aeta is False:
@@ -95,15 +95,42 @@ def mis_cursos(request):
     consejero = Academic.objects.filter(cve_academic=consejero_estudiante.cve_academic).first()
 
     # recuperar los cursos del estudiante
+    capcursos = Sinsevi.objects.filter(cve_estud=cve_estud)  # Filtrar objetos
+    cred_regular = 0
+    cred_seminarios = 0
+    cred_inv = 0
 
-    capcursos =  Sinsevi.objects.filter(cve_estud=cve_estud) # se envia el objeto a html
+    for curso in capcursos:
+        if curso.cve_curso in [str(cve_program) + '680', str(cve_program) + '681', str(cve_program) + '682']:
+            cred_seminarios += curso.credima
+        elif curso.cve_curso == str(cve_program) + '690':
+            cred_inv += curso.credima
+        else:
+            cred_regular += curso.credima
+
+    total = cred_regular + cred_seminarios + cred_inv
+    suma_creditos = {
+        'cred_seminarios': cred_seminarios,
+        'cred_inv': cred_inv,
+        'cred_regular': cred_regular,
+        'total': total,
+    }
+
+    config = {
+        'periodo': settings.PERIODO,
+        'anio': settings.ANIO,
+        'flimite': settings.FECHA_LIMITE
+    }
 
     #nacionalidad
-    pais ='MEXICANA'
+    # Acceder a la tabla 'Estud_nacion' y filtrar por 'cve_estud'
+    nacion = Estud_nacion.objects.get(cve_estud=estudiante.cve_estud)
+    # Luego, acceder a la tabla 'Catanaci' y filtrar por 'cve_nacion' (suponiendo que 'nacion' contiene el registro que necesitas)
+    pais = Catanaci.objects.get(cve_nacion=nacion.cve_nacion)
 
     render_data = {
-        'estudiante': estudiante, 'programa': programa, 'capcursos': capcursos, 'periodo': periodo, 'anio': anio, 'consejero': consejero,
-        'entidad_beca': entidad_beca, 'pais': pais }
+        'estudiante': estudiante, 'programa': programa, 'capcursos': capcursos, 'config': config, 'consejero': consejero,
+        'entidad_beca': entidad_beca, 'pais': pais , 'suma_creditos': suma_creditos}
 
     return render(request, 'mis_cursos.html', render_data)
 
@@ -319,12 +346,14 @@ def crea_asistira(request):
                     sinsevi.id_capcurs = micurso
                     sinsevi.cve_curso = cve_curso
                     sinsevi.nombre = micurso.nombre
+                    sinsevi.credimi = catacurs.credimi
+                    sinsevi.credima = catacurs.credima
                     sinsevi.cve_academic = cve_academic
                     sinsevi.nom_academic = micurso.nom_academic
                     sinsevi.apellidos = micurso.apellidos
                     sinsevi.gpo_670 = catacurs.gpo_670
                     sinsevi.save()
-                    # sinsevi creado
+                    # inscrip creado
 
                     return JsonResponse({'success': True})
 
@@ -359,6 +388,7 @@ def crea_asistira690(request):
         # Verificar si el curso ya existe en la tabla Asistira
         if Asistira.objects.filter(cve_estud=usuario.cve_estud, cve_curso=codigo_690).exists():
             # El curso ya existe, enviar un mensaje de error.
+            print('Ya existe')
             response_data = {'success': False, 'message': 'INVESTIGACIÓN ya ha sido agregado.'}
         else:
             # El curso no existe, crearlo.
@@ -405,6 +435,8 @@ def crea_asistira690(request):
                         cve_estud=usuario.cve_estud,
                         cve_curso=codigo_690,
                         nombre=catacurs.nombre,
+                        credimi = catacurs.credimi,
+                        credima = catacurs.credima,
                         cve_academic=investigador.cve_academic,
                         nom_academic=profesor.nombres,
                         apellidos=profesor.apellidos,
@@ -497,7 +529,10 @@ def guardar_boleta(request):
     capcursos =  Sinsevi.objects.filter(cve_estud=cve_estud) # se envia el objeto a html
 
     #nacionalidad
-    pais ='MEXICANA'
+    # Acceder a la tabla 'Estud_nacion' y filtrar por 'cve_estud'
+    nacion = Estud_nacion.objects.get(cve_estud=estudiante.cve_estud)
+    # Luego, acceder a la tabla 'Catanaci' y filtrar por 'cve_nacion' (suponiendo que 'nacion' contiene el registro que necesitas)
+    pais = Catanaci.objects.get(cve_nacion=nacion.cve_nacion)
 
     render_data = {
         'estudiante': estudiante, 'programa': programa, 'capcursos': capcursos, 'periodo': periodo, 'anio': anio, 'consejero': consejero,
@@ -570,8 +605,11 @@ def cursos_asistire(request):
 
     capcursos = Sinsevi.objects.filter(cve_estud=cve_estud)  # se envia el objeto a html
 
-    # nacionalidad
-    pais = 'MEXICANA'
+    #nacionalidad
+    # Acceder a la tabla 'Estud_nacion' y filtrar por 'cve_estud'
+    nacion = Estud_nacion.objects.get(cve_estud=estudiante.cve_estud)
+    # Luego, acceder a la tabla 'Catanaci' y filtrar por 'cve_nacion' (suponiendo que 'nacion' contiene el registro que necesitas)
+    pais = Catanaci.objects.get(cve_nacion=nacion.cve_nacion)
 
     render_data = {
         'estudiante': estudiante, 'programa': programa, 'capcursos': capcursos, 'periodo': periodo, 'anio': anio,
@@ -596,7 +634,7 @@ def generarPDF(request):
 
         archivo_adjunto = request.FILES.get('pdf')
         # Envía el correo electrónico
-        destinatario = ['sistema.inscripcioncm@colpos.mx', estudiante.username]
+        destinatario = [estudiante.username]
         #destinatario = ['sinscripcolpos@gmail.com', estudiante.e_mailcp, 'servacadmontecillo@colpos.mx', consejero.email, coordinacion.username, 'posgradosybecas@colpos.mx']
         print(estudiante.nombres)
         asunto = 'Boleta de preinscripción' + ' ' + str(estudiante.cve_estud) + ' ' + estudiante.nombres + ' ' + estudiante.apellidos

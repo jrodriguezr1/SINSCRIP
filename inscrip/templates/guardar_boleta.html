@@ -56,8 +56,8 @@
                         <td>{{ entidad_beca.nombre }}</td>
                     </tr>
                     <tr>
-                        <th>NACIONALIDAD </th>
-                        <td>{{ pais }}</td>
+                        <th>PAÍS DE ORIGEN</th>
+                        <td>{{ pais.nombre }}</td>
                     </tr>
                 </table>
             </div>
@@ -149,7 +149,7 @@
 
         var opt = {
             margin: [20, 20],
-            html2canvas: { scale: 1 },
+            html2canvas: { scale: 2 },
             jsPDF: { orientation: 'landscape' },
         };
 

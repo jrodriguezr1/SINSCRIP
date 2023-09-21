@@ -12,9 +12,10 @@
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <title>SINSCRIP</title>
+    <title>SINSEVI</title>
 </head>
 <body>
+
 
 <main>
     <!-- La imagen institucional -->
@@ -23,8 +24,13 @@
     </div>
 
     <div>
-        <h1>PRE-INSCRIPCIONES {{ periodo }} {{ anio }}</h1>
+        <h1>PRE-INSCRIPCIONES {{ config.periodo }} {{ config.anio }}</h1>
     </div>
+
+    <div id="contador-container">
+        <h5 id="cuenta-regresiva"></h5>
+    </div>
+
 
     {% if messages %}
         <div id="messages">
@@ -50,13 +56,12 @@
                 </tr>
                 <tr>
                     <th>PERIODO ACADÉMICO </th>
-                    <td>{{ periodo }}</td>
+                    <td>{{ config.periodo }}</td>
                 </tr>
                 <tr>
                     <th>CATEGORÍA </th>
                     <td>{{ estudiante.niveestu }}</td>
                 </tr>
-
             </table>
         </div>
 
@@ -100,14 +105,41 @@
                                 </button>
                             </td>
                         </tr>
+                        {% if forloop.counter == 6 %}
+                            <script>
+                                alert("El número máximo de cursos debe ser igual a 6.");
+                            </script>
+                        {% endif %}
                     {% endfor %}
 
                     </tbody>
                 </table>
+
             </div>
         </div>
     </div>
-    <hr>
+
+    <div>
+        <table id="creditos">
+            <tr>
+                <th>CRÉDITOS POR CURSOS REGULARES: </th>
+                <td> {{ suma_creditos.cred_regular }}</td>
+            </tr>
+            <tr>
+                <th>CRÉDITOS POR SEMINARIOS:  </th>
+                <td> {{ suma_creditos.cred_seminarios }}</td>
+            </tr>
+            <tr>
+                <th>CRÉDITOS POR INVESTIGACIÓN: </th>
+                <td> {{ suma_creditos.cred_inv }}</td>
+            </tr>
+            <tr>
+                <th>TOTAL DE CRÉDITOS: </th>
+                <td> {{ suma_creditos.total }}</td>
+            </tr>
+        </table>
+    </div>
+
     <div>
         <a class="btn btn-secondary" href="{% url 'inscrip:guardar_boleta' %}">Guardar y Enviar </a>
         <button class="btn logout-button" type="submit" id="logout-button">Cerrar Sesión</button>
@@ -116,7 +148,7 @@
     <div>
         <!-- Aquí puedes agregar el contenido de tu pie de página -->
         <p class="text-center"> NOTA: El Profesor consejero u orientador es el responsable directo de la planeación y seguimiento del plan de estudios del
-estudiante </p>
+            estudiante </p>
     </div>
 </main>
 <script>
@@ -142,7 +174,7 @@ estudiante </p>
 
 <script>
     document.getElementById("logout-button").addEventListener("click", function() {
-        window.location.href = "/inscrip/logout/";
+        window.location.href = "../logout/";
     });
 </script>
 
@@ -164,7 +196,7 @@ estudiante </p>
                     alert(data.message);
                     window.location.reload();
                 } else {
-                    alert('Error al crear el curso.');
+                    alert('INVESTIGACIÓN ya ha sido agregado.');
                 }
             })
             .catch(error => {
@@ -184,12 +216,42 @@ estudiante </p>
         const confirmacion = confirm("¿Estás seguro de que deseas eliminar este curso?");
         if (confirmacion) {
             // Si el usuario confirma la eliminación, redirige a la vista que eliminará el curso
-            window.location.href = `/inscrip/elimina_uncurso/${id_sinsevi}/`;
+            window.location.href = `../elimina_uncurso/${id_sinsevi}/`;
         } else {
             // Si el usuario cancela la eliminación, no se hace nada
             return false;
         }
     }
+
+    // Obtén la fecha límite desde {{ config.flimite }} (asegúrate de que esté en un formato de fecha válido)
+    const fechaLimiteString = '{{ config.flimite }}';
+    const fechaLimite = new Date(fechaLimiteString);
+
+    // Función para actualizar la cuenta regresiva
+    function actualizarCuentaRegresiva() {
+        const ahora = new Date();
+        const diferencia = fechaLimite - ahora;
+
+        if (diferencia <= 0) {
+            // La fecha límite ha pasado
+            document.getElementById('cuenta-regresiva').textContent = 'La fecha límite ha pasado';
+        } else {
+            const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
+            const horas = Math.floor((diferencia % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
+            const segundos = Math.floor((diferencia % (1000 * 60)) / 1000);
+
+            const cuentaRegresivaTexto = `Quedan ${dias} días ${horas} horas ${minutos} minutos ${segundos} segundos`;
+            document.getElementById('cuenta-regresiva').textContent = cuentaRegresivaTexto;
+        }
+    }
+
+    // Actualiza la cuenta regresiva cada segundo
+    setInterval(actualizarCuentaRegresiva, 1000);
+
+    // Llama a la función inicialmente para que se muestre inmediatamente
+    actualizarCuentaRegresiva();
+
 </script>
 
 </body>

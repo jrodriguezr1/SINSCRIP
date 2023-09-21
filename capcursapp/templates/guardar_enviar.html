@@ -10,11 +10,13 @@
     <link rel="stylesheet" href="{% static 'CSS/guardar_enviar.css' %}">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
     <title>Cursos programados</title>
 </head>
 
 <body>
-<form method="post" id="formulario" action="{% url 'capcursapp:generarPDF' %}" >
+<main>
+<form method="post"  id="formulario" action="{% url 'capcursapp:generarPDF' %}" >
 
     {% csrf_token %}
     <input type="hidden" name="nom_program" value="{{ usuario.nom_program }}">
@@ -36,6 +38,7 @@
                 <th scope="col">NOMBRE DEL CURSO</th>
                 <th scope="col">CLAVE DEL PROFESOR</th>
                 <th scope="col">PROFESOR TITULAR</th>
+                <th scope="col">COLABORADORES</th>
                 <th scope="col">CRÉDITOS</th>
                 <th scope="col">LUNES</th>
                 <th scope="col">MARTES</th>
@@ -54,6 +57,17 @@
                     <td>{{ curso.nombre }}</td>
                     <td>{{ curso.cve_academic_id }}</td>
                     <td>{{ curso.nom_academic }} {{ curso.apellidos }}</td>
+                    <td>
+                        {% for col in colaboradores %}
+                            {% if col.cve_curso == curso.cve_curso_id %}
+                                {% for acad in datos_academicos %}
+                                    {% if acad.cve_academic == col.cve_academic %}
+                                        {{ acad.cve_academic }}: {{ acad.nombres }} {{ acad.apellidos }}<br>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                    </td>
                     <td>{{ curso.creditos }}</td>
 
                     <td class="lunes">
@@ -167,14 +181,16 @@
         <button class="btn btn-light" id="guardar-enviar">Firmar <i class="fas fa-file-signature"></i></button>
     </div>
 </form>
+</main>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.3/js/jquery.dataTables.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
 
+
 <script>
     function generarYPdfEnviarPorEmail() {
-            // Ocultar los botones en el PDF
+        // Ocultar los botones en el PDF
         var botonesPdf = document.querySelector(".botones-pdf");
         botonesPdf.style.display = "none";
 
@@ -183,8 +199,9 @@
 
         var opt = {
             margin: [10, 10],
-            html2canvas: { scale: 1 },
+            html2canvas: { scale: 2 },
             jsPDF: { orientation: 'landscape' },
+            fontSize: 14, // Cambia el tamaño de fuente aquí (en puntos)
         };
 
         html2pdf().from(element).set(opt).outputPdf('datauristring').then(function (archivoAdjunto) {
@@ -192,6 +209,8 @@
             enviarEmail(archivoAdjunto);
         });
     }
+
+
 
     function enviarEmail(archivoAdjunto) {
         // Obtener el token CSRF del sitio web
@@ -211,7 +230,7 @@
             if (xhr.status === 200) {
                 // El servidor ha respondido correctamente
                 // Realiza las acciones necesarias aquí
-                 window.location.href = "{% url 'capcursapp:cursos_guardados' %}";
+                window.location.href = "{% url 'capcursapp:cursos_guardados' %}";
             } else {
                 // El servidor ha respondido con un código de estado diferente de 200
                 // Maneja el error o muestra un mensaje de error al usuario
@@ -253,7 +272,5 @@
         generarYPdfEnviarPorEmail();
     });
 </script>
-
 </body>
-
 </html>

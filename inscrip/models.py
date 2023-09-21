@@ -190,6 +190,8 @@ class Sinsevi(models.Model):
     id_capcurs = models.ForeignKey(Capcurs, models.DO_NOTHING, db_column='id_capcurs', blank=True, null=True)
     cve_curso = models.CharField(max_length=6, blank=True, null=True)
     nombre = models.CharField(max_length=120)
+    credimi = models.IntegerField()
+    credima = models.IntegerField()
     cve_academic = models.CharField(max_length=6, blank=True, null=True)
     nom_academic = models.CharField(max_length=50)
     apellidos = models.CharField(max_length=100)
@@ -251,14 +253,28 @@ class Catacurs(models.Model):
         db_table = 'catacurs'
 
 class Catanaci(models.Model):
+    id = models.AutoField(primary_key=True)  # Agregar un campo 'id'
     cve_campus = models.CharField(max_length=3)
-    cve_nacion = models.IntegerField()
+    cve_nacion = models.IntegerField(unique=True) # unique=True para hacerla única
     nombre = models.CharField(max_length=80)
 
     class Meta:
         managed = False
         db_table = 'catanaci'
         db_table_comment = 'Catalogo de nacionalidades'
+
+
+class Estud_nacion(models.Model):
+    id = models.AutoField(primary_key=True)  # Agregar un campo 'id'
+    cve_estud = models.BigIntegerField(blank=True, null=True)
+    cve_nacion = models.IntegerField()
+    cve_campus = models.CharField(max_length=3)
+
+    class Meta:
+        managed = False
+        db_table = 'estud_nacion'
+
+
 
 class Coordinaciones(models.Model):
     last_login = models.DateTimeField(blank=True, null=True)

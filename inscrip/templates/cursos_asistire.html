@@ -48,7 +48,7 @@
                 <h1 class="felicidades" {% if message.tags %} {% endif %}>{{ message }}</h1>
             {% endfor %}
         {% endif %}
-        <h3 class="felicidades">Ha finalizado el proceso de pre-inscripciones.</h3>
+        <h3 class="felicidades">El proceso de inscripciones ha finalizado</h3>
         <h1 class="felicidades">¡Felicitaciones!</h1>
     </div>
 
@@ -84,8 +84,8 @@
                         <td>{{ entidad_beca.nombre }}</td>
                     </tr>
                     <tr>
-                        <th>NACIONALIDAD:</th>
-                        <td>MEXICANA</td>
+                        <th>PAÍS DE ORIGEN</th>
+                        <td>{{ pais.nombre }}</td>
                     </tr>
                 </table>
             </div>

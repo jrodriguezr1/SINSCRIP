@@ -1,11 +1,17 @@
 import json
 import os
+import smtplib
 from datetime import date
+from urllib import request
+
 from django.contrib import messages
 from django.contrib.auth import logout, authenticate, login
-from django.http import JsonResponse
-from django.shortcuts import render, redirect
+from django.core.mail import EmailMultiAlternatives
+from django.http import JsonResponse, HttpResponse
+from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q
+from django.utils.html import strip_tags
+
 from SINSCRIP import settings
 from capcursapp.models import Coordinaciones
 from inscrip.models import Estudian
@@ -30,6 +36,7 @@ def verificar_credenciales(request):
         if user is not None:
             login(request, user)
             request.session['usuario_id'] = user.id
+            print('si se autentico mano')
             return redirect('cordins:panel_posgrados')
         else:
             # Las credenciales son inválidas
@@ -37,6 +44,7 @@ def verificar_credenciales(request):
             return render(request, 'inicio_cordins.html')
     else:
         return render(request, 'inicio_cordins.html')
+
 
 def estudiante_to_dict(estudiante):
 
@@ -71,7 +79,7 @@ def custom_json_serializer(obj):
     raise TypeError("Object of type '{}' is not JSON serializable".format(type(obj).__name__))
 
 
-def panel_posgrados(request):
+def panel_posgrados2(request):
     usuario_id = request.session.get('usuario_id')
     usuario = Coordinaciones.objects.get(id=usuario_id)
     periodo = settings.PERIODO
@@ -92,6 +100,35 @@ def panel_posgrados(request):
     return render(request, 'panel_posgra.html',
                   {'usuario': usuario, 'periodo': periodo, 'categorias': categorias, 'data': data})
 
+
+
+def panel_posgrados(request):
+    usuario_id = request.session.get('usuario_id')
+
+    try:
+        usuario = Coordinaciones.objects.get(id=usuario_id)
+    except Coordinaciones.DoesNotExist:
+        # Si el usuario no existe, redirige al inicio de sesión
+        messages.error(request, 'Usuario o contraseña incorrectos.')
+        return redirect('cordins:iniciar_sesion')
+
+    periodo = settings.PERIODO
+    clave = ['MAESTRIA', 'DOCTORADO']
+    valor = ['MAESTRIA', 'DOCTORADO']
+    categorias = dict(zip(clave, valor))
+
+    if usuario.cve_program == 'EST':
+        print('es estadistica man')
+        estudiantes = Estudian.objects.filter(Q(cve_program='ECD') | Q(cve_program='EST'))
+    else:
+        estudiantes = Estudian.objects.filter(cve_program=usuario.cve_program)
+
+    data = [{'cve_estud': est.cve_estud, 'niveestu': est.niveestu, 'nombres': est.nombres,
+             'apellidos': est.apellidos, 'consejop': est.consejop,
+             'aeta': est.aeta} for est in estudiantes]
+
+    return render(request, 'panel_posgra.html',
+                  {'usuario': usuario, 'periodo': periodo, 'categorias': categorias, 'data': data})
 
 def estudiantes_por_categoria(request):
     print('aqui van filtrados')
@@ -128,31 +165,6 @@ def actualizar_checkbox(request):
         return JsonResponse({'status': 'error'})
 
 
-
-def upload_pdf(request, student_id):
-    if request.method == 'POST':
-        # Obtener el archivo PDF del request
-        print('SI es post')
-        pdf_file = request.FILES.get('pdf', None)
-
-        if not pdf_file:
-            return JsonResponse({'error': 'No se recibió el archivo PDF'}, status=400)
-
-        if pdf_file.size > 2097152:
-            return JsonResponse({'error': 'El archivo seleccionado supera el tamaño máximo de 2 MB'}, status=400)
-
-        # Procesar y guardar el archivo en el servidor
-        try:
-            with open(f'/SINS_CRIP/AETA_2023/{student_id}_archivo.pdf', 'wb') as destination:
-                for chunk in pdf_file.chunks():
-                    destination.write(chunk)
-        except Exception as e:
-            return JsonResponse({'error': 'Error al guardar el archivo en el servidor'}, status=500)
-
-        return JsonResponse({'message': 'Archivo PDF subido correctamente'}, status=200)
-
-    return JsonResponse({'error': 'Método no permitido'}, status=405)
-
 def recibir_archivo(request):
     if request.method == "POST":
         cve_estud = request.POST.get('cve_estud')
@@ -165,13 +177,15 @@ def recibir_archivo(request):
         # cve_program matricula periodo agno
         # COA_12033059_VERANO_2023
         periodo = settings.PERIODO
+        anio = settings.ANIO
 
-        nombre_archivo = cve_program + cve_estud + 'AETA' + periodo
+        nombre_archivo = str(cve_program) + str(cve_estud) + 'AETA' + str(periodo) + str(anio)
 
         #nombre_archivo = archivo.name
         if archivo.size > 2097152:
-            print('pesa menos de 2')
-            return JsonResponse({'error': 'El archivo seleccionado supera el tamaño máximo de 2 MB'}, status=400)
+            print('pesa mas de 2 mb')
+            mensage = 'El documento PDF debe pesar menos de 2 mb'
+            return JsonResponse({"message": mensage})
 
         # Ruta donde se almacenarán los archivos (directorio 'boletas_2023' en el directorio de medios de Django)
         ruta_archivos = os.path.join("AETA_2023", nombre_archivo)
@@ -187,10 +201,65 @@ def recibir_archivo(request):
         estudiante.aeta = True  # O asigna el valor que corresponda
         estudiante.save()  # Guarda los cambios en la base de datos
 
+        enviar_aviso(estudiante.cve_estud)
+
         mensage = 'El Acta de evaluación se ha guardado para: ' + cve_estud
 
         return JsonResponse({"message": mensage})
     print('No es post Man')
 
     return JsonResponse({"message": "No se ha recibido ningún archivo o el método de solicitud no es válido."})
+
+
+def  enviar_aviso(cve_estud):
+    estudiante = get_object_or_404(Estudian, cve_estud=cve_estud)
+
+    # Envía el correo electrónico
+    destinatario = [estudiante.username]
+    #destinatario = ['sinscripcolpos@gmail.com', estudiante.e_mailcp, 'servacadmontecillo@colpos.mx', consejero.email, coordinacion.username, 'posgradosybecas@colpos.mx']
+    print(estudiante.nombres)
+    asunto = 'AETA-' + str(cve_estud) + ' Registrada'
+    periodo = settings.PERIODO
+    anio = settings.ANIO
+    mensaje = 'C O L E G I O   D E   P O S T G R A D U A D O S\n'
+    mensaje += 'C A M P U S   M O N T E C I L L O\n\n'
+    mensaje += 'Estimad@: ' + estudiante.nombres + ' ' + estudiante.apellidos
+    mensaje += '\n\nLa coordinacion de su posgrado ha revisado su Acta de Evaluacion de Trabajo Académico\n'
+    mensaje += 'Por lo que le informamos que puede acceder al sistema de inscripciones en linea (SINSEVI) http://10.0.0.90:9000/inscrip/ \n'
+    mensaje += 'para realizar el proceso de inscripciones del periodo de ' + periodo + str(anio) + '.\n'
+    mensaje += '\n\nATENTAMENTE\n\n'
+    mensaje += 'SUBDIRECCIÓN DE EDUCACIÓN DEL CAMPUS MONTECILLO'
+    mensaje_plano = strip_tags(mensaje)
+
+    # Crear el objeto EmailMultiAlternatives
+    email = EmailMultiAlternatives(
+        asunto,
+        str(mensaje_plano),
+        'sinscripcolpos@gmail.com',
+        destinatario
+    )
+
+    # Envía el correo electrónico utilizando SMTP
+    try:
+        smtp_server = 'smtp.gmail.com'
+        smtp_port = 587
+        smtp_usuario = 'sinscripcolpos@gmail.com'
+        smtp_password = 'murvdxcfnfroschr'  # Asegúrate de utilizar las credenciales correctas
+        smtp = smtplib.SMTP(smtp_server, smtp_port)
+        smtp.ehlo()
+        smtp.starttls()
+        smtp.login(smtp_usuario, smtp_password)
+        smtp.sendmail(smtp_usuario, destinatario, email.message().as_bytes())
+
+        smtp.quit()
+
+        # Después de procesar el archivo con éxito
+        return HttpResponse('Archivo recibido correctamente.')
+
+    except smtplib.SMTPException as e:
+        messages.success(request, '¡Correo electrónico no enviado, intente de nuevo!')
+        return HttpResponse(f'Error al enviar el correo electrónico: {str(e)}')
+
+
+
 

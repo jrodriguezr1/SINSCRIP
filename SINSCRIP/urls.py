@@ -24,5 +24,6 @@ urlpatterns = [
     path('capcursapp/', include('capcursapp.urls')),
     path('cordins/', include('cordins.urls')),
     path('inscrip/', include('inscrip.urls')),
+    path('siayb/', include('siayb.urls')),
     path('', panel_control, name='panel_control'),
 ]

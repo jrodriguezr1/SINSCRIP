@@ -53,7 +53,7 @@ def cursos_guardados(request):
                                                      'cursos_posgra': cursos_posgra, 'periodo':periodo, 'anio': anio})
 
 
-def mostrar_cursos(request):
+def mostrar_cursos2(request):
     usuario_id = request.session.get('usuario_id')
     periodo = settings.PERIODO
     anio = settings.ANIO
@@ -62,6 +62,10 @@ def mostrar_cursos(request):
         return redirect('iniciar_sesion')
     try:
         coordinacion = Coordinaciones.objects.get(id=usuario_id)
+        if Coordinaciones.DoesNotExist:
+            # Si el usuario no existe, redirige al inicio de sesión
+            messages.error(request, 'Usuario o contraseña incorrectos.')
+            return redirect('cordins:iniciar_sesion')
         #print('Inicio sesion: ', coordinacion)
         coordinacion.incrementar_cont_veces()  # Incrementa el valor de cont_veces en 1
         #print('Valor de: ', coordinacion.cont_final)
@@ -73,13 +77,38 @@ def mostrar_cursos(request):
         usuario = Coordinaciones.objects.get(id=usuario_id)
         miscursospersonal = Capcurs.objects.filter(cve_program=usuario.cve_program)
     except Coordinaciones.DoesNotExist:
-        messages.error(request, 'El usuario no existe.')
+        messages.error(request, 'Usuario o contraseña incorrectos.')
         return redirect('iniciar_sesion')
     return render(request, 'mostrarcursos.html', {'miscursospersonal': miscursospersonal, 'usuario': usuario, 'periodo': periodo, 'anio': anio})
 
 
+
+def mostrar_cursos(request):
+    usuario_id = request.session.get('usuario_id')
+    periodo = settings.PERIODO
+    anio = settings.ANIO
+
+    if not usuario_id:
+        return redirect('capcursapp:iniciar_sesion')
+
+    try:
+        coordinacion = Coordinaciones.objects.get(id=usuario_id)
+        coordinacion.incrementar_cont_veces()  # Incrementa el valor de cont_veces en 1
+
+        if coordinacion.cont_final >= 50:
+            # El usuario ya ha generado el PDF, redirige a otra página o muestra un mensaje
+            return redirect('capcursapp:cursos_guardados')
+
+        miscursospersonal = Capcurs.objects.filter(cve_program=coordinacion.cve_program)
+    except Coordinaciones.DoesNotExist:
+        messages.error(request, 'Usuario o contraseña incorrectos.')
+        return redirect('capcursapp:iniciar_sesion')
+
+    return render(request, 'mostrarcursos.html', {'miscursospersonal': miscursospersonal, 'usuario': coordinacion, 'periodo': periodo, 'anio': anio})
+
+
 def generar_capcurs(request, cve_curso, periodo, tiene_colab, tiene_practicas, cve_academic, lunes_ini, lunes_fin,
-                     martes_ini, martes_fin, miercoles_ini, miercoles_fin, jueves_ini, jueves_fin, viernes_ini, viernes_fin, aula):
+                    martes_ini, martes_fin, miercoles_ini, miercoles_fin, jueves_ini, jueves_fin, viernes_ini, viernes_fin, aula):
     # Acceder al objeto "loscursos" de la variable "cursos_unicos"
     cursos_unicos = agregar_curso(request)
     cursos = cursos_unicos.get(cve_curso, [])
@@ -124,7 +153,7 @@ def crear_capcurs(request):
 
             catacurs = Catacurs.objects.filter(cve_curso=cve_curso, vigente="S").first()
             academic = Academic.objects.filter(cve_academic=cve_academic).first()
-            imparegubda = Imparegubda.objects.filter(cve_academic=cve_academic).first()
+
             if not catacurs:
                 return JsonResponse(
                     {'status': 'error', 'message': 'No se encontró un curso con el cve_curso especificado.'})
@@ -470,10 +499,15 @@ def verificar_curso_existente(request):
 def guardar_enviar(request, nom_program):
     usuario = Coordinaciones.objects.get(nom_program=nom_program)
     cursos_posgra = Capcurs.objects.filter(cve_program=usuario.cve_program)
+    colaboradores = Imparegu.objects.filter(participa='Colaborador')
+    cve_academic_list = [colaborador.cve_academic for colaborador in colaboradores]
+    datos_academicos = Academic.objects.filter(cve_academic__in=cve_academic_list)
+
     periodo = settings.PERIODO
     anio = settings.ANIO
 
     return render(request, 'guardar_enviar.html', {'usuario': usuario, 'cursos_posgra': cursos_posgra,
+                                                   'colaboradores': colaboradores, 'datos_academicos': datos_academicos,
                                                    'periodo': periodo, 'anio': anio})
 
 
@@ -485,13 +519,15 @@ def generarPDF(request):
         usuario = Coordinaciones.objects.filter(username=elusuario.username).first()
         archivo_adjunto = request.FILES.get('pdf')
         # Envía el correo electrónico
-        destinatario = ['servacadmontecillo@colpos.mx', 'sinscripcolpos@gmail.com', usuario.username]
+        destinatario = ['rodriguez.rosales@colpos.mx']
+        #destinatario = ['servacadmontecillo@colpos.mx', 'sinscripcolpos@gmail.com', usuario.username]
+
         asunto = 'Cursos Programados' + ' ' + usuario.cve_posgrad + '-' + usuario.nom_program
         periodo = settings.PERIODO
         anio = settings.ANIO
         mensaje = 'C O L E G I O   D E   P O S T G R A D U A D O S\n'
         mensaje += 'C A M P U S   M O N T E C I L L O\n\n'
-        mensaje += 'Se adjunta documento PDF de los cursos programados para el periodo de ' + periodo + ' ', anio + ' ' + usuario.cve_posgrad + '-' + usuario.nom_program
+        mensaje += 'Se adjunta documento PDF de los cursos programados para el periodo de ' + periodo + '_' + str(anio) + '_' + usuario.cve_posgrad + '_' + usuario.nom_program
         mensaje += '\n\nATENTAMENTE\n\n'
         mensaje += 'SUBDIRECCION ACADEMICA'
 

@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'inscrip',
     'cordins',
+    'siayb',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
@@ -96,6 +97,9 @@ DATABASES = {
 #CONFIGURACIONES
 PERIODO = 'OTOÑO'
 ANIO = 2023
+FECHA_LIMITE = '2023-09-18 17:00:00'
+
+
 
 
 # Password validation
@@ -137,6 +141,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
+# Ruta donde se almacenarán los archivos estáticos recopilados para producción
+#STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
